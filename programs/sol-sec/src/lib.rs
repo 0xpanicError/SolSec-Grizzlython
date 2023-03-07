@@ -34,6 +34,15 @@ mod hello_anchor {
         //stake 25 % of the pool prize 
         let stake = 0.25*pool_prize;
         // where to put the stake ? will the contract have it ?
+        let proposal = Proposal {
+        authority: ctx.accounts.authority.clone(),
+        governance_token_account: ctx.accounts.governance_token_account.clone(),
+        proposal_account: ctx.accounts.proposal_account.clone(),
+        title,
+        start_date,
+        end_date,
+        prize_pool,
+        };
 
         Ok(());
       }
@@ -81,6 +90,8 @@ mod hello_anchor {
       }
 
       pub fn voting_verdict(ctx: <Voting_Verdict>) -> Result<()>{
+        
+        // need to create proposal id with proposal attribute
         if(yes_votes > 0.66*total_votes_casted && total_votes_casted > 0.10*totalsupply){
           proposal_id.eligible = true ;
         }else{
@@ -100,15 +111,70 @@ mod hello_anchor {
           
       }
 
-      pub fn vote_for_judge(ctx: Context<Vote_For_Judge>) -> Result<()>{
+      pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: u64,choice2: u64,choice3: u64) -> Result<()>{
+    
+    let vote_account = &mut ctx.accounts.vote_account;
+    let governance_token_account = &mut ctx.accounts.governance_token_account;
+    let voter = &ctx.accounts.voter;
+
+    // Check if the governance token is owned by the program.
+    if governance_token_account.owner != *ctx.program_id {
+        return Err(ErrorCode::NotProgramToken.into());
+    }
+
+    // Check if the voter has enough tokens to cast a vote.
+    let voter_balance = governance_token_account.balance;
+    if voter_balance == 0 {
+        return Err(ErrorCode::InsufficientTokens.into());
+    }
+
+    //no proposal struct yet
+    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+    let voting_start_time = proposal.voting_start_time;
+    let voting_end_time = voting_start_time + voting_period;
+        
+    if current_time < voting_start_time || current_time > voting_end_time {
+        return Err(ErrorCode::VotingPeriodOver.into());
+    }
+        // voting judges based on priority 
+        // not properly implemented right now
+         let vote_weight = voter_balance;
+          choice1.support += 5*vote_weight;
+          choice2.support += 5*vote_weight;
+          choice3.support += 5*vote_weight;
+          
+        Ok(())
+       
+      }
+    
+    pub fn get_candidates(
+        _ctx: Context<GetCandidates>,
+    ) -> ProgramResult {
+        // iterates and gets the list of all candidates
+        let accounts = _ctx.accounts;
+        let candidate_accounts = accounts
+            .candidate_list
+            .to_account_infos()
+            .into_iter()
+            .map(|info| Candidate::unpack(&info.data.borrow()).unwrap())
+            .collect::<Vec<Candidate>>();
+        Ok(candidate_accounts)
+      }
+      pub fn judge_verdict(ctx:Context<Judge_Verdict>) -> Result<()>{
           
       }
 
       pub fn submit_report(ctx: Context<Submit_Report>) -> Result<()>{
-          
-      }
+         
+     }
 
       pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
+         let mut High_risk_rewardees: Vec<Vec<u32>> = Vec::new();
+         let mut Medium_risk_rewardees: Vec<Vec<u32>> = Vec::new();
+         let mut Report_rewardees: Vec<Vec<u32>> = Vec::new();
+
+        // how are we getting the user input ??
           
       }
 
@@ -118,9 +184,27 @@ mod hello_anchor {
 }
 
 #[derive(Accounts)]
+pub struct Proposal {
+    //proposal by the protocol
+    pub authority: Signer<'info>,
+    pub governance_token_account: Account<'info, GovernanceTokenAccount>,
+    pub proposal_account: Account<'info, ProposalAccount>,
+    pub title: String,
+    pub start_date: String,
+    pub end_date: String,
+    pub prize_pool: u64,
+}
+
+pub struct GetCandidates<'info> {
+    // to get the list of candidates
+    #[account(address = "")]
+    pub candidate_list: AccountInfo<'info>,
+}
+
 pub struct Create_Proposal<'info> {
  clock: Sysvar<'info, Clock>,
 }
+                            
 pub struct Vote_For_Proposal<'info> {
    
     #[account(has_one = governance_token)]
