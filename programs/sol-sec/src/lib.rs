@@ -141,8 +141,8 @@ mod hello_anchor {
         // not properly implemented right now
          let vote_weight = voter_balance;
           choice1.support += 5*vote_weight;
-          choice2.support += 5*vote_weight;
-          choice3.support += 5*vote_weight;
+          choice2.support += 3*vote_weight;
+          choice3.support += 1*vote_weight;
           
         Ok(())
        
@@ -151,19 +151,28 @@ mod hello_anchor {
     pub fn get_candidates(
         _ctx: Context<GetCandidates>,
     ) -> ProgramResult {
-        // iterates and gets the list of all candidates
-        let accounts = _ctx.accounts;
-        let candidate_accounts = accounts
-            .candidate_list
-            .to_account_infos()
-            .into_iter()
-            .map(|info| Candidate::unpack(&info.data.borrow()).unwrap())
-            .collect::<Vec<Candidate>>();
-        Ok(candidate_accounts)
-      }
-      pub fn judge_verdict(ctx:Context<Judge_Verdict>) -> Result<()>{
-          
-      }
+         let accounts = _ctx.accounts;
+
+    // Iterate through the list of candidate accounts and retrieve the number of votes for each candidate.
+    let mut candidate_votes: Vec<(Candidate, u32)> = accounts
+        .candidate_list
+        .to_account_infos()
+        .into_iter()
+        .map(|info| (Candidate::unpack(&info.data.borrow()).unwrap(), info.data.borrow().len() as u32))
+        .collect();
+
+    // Sort the list of candidates based on the number of votes they have received, in descending order.
+    candidate_votes.sort_by(|a, b| b.1.cmp(&a.1));
+    let my_vec: Vec<string> = vec![""; 10];
+    // Print the top three candidates based on the number of votes they have received.
+    // println!("Top three candidates:");
+     for (i, (candidate, votes)) in candidate_votes.iter().enumerate().take(3) {
+        // println!("{}: {:?} ({} votes)", i + 1, candidate, votes);
+        judge[i]=candidate.name;
+     }
+     
+    }
+     
 
       pub fn submit_report(ctx: Context<Submit_Report>) -> Result<()>{
          
@@ -193,6 +202,14 @@ pub struct Proposal {
     pub start_date: String,
     pub end_date: String,
     pub prize_pool: u64,
+}
+
+#[derive(Accounts)]
+pub struct Candidate {
+    pub name: String,
+    pub email: String,
+    pub proposal: String,
+    pub votes: u64,
 }
 
 pub struct GetCandidates<'info> {
@@ -230,9 +247,6 @@ pub struct Apply_For_Judge<'info> {
     
 }
 pub struct Vote_For_Judge<'info> {
-    
-}
-pub struct Submit_Report<'info> {
     
 }
 pub struct Submit_Report<'info> {
