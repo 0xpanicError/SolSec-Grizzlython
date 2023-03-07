@@ -108,7 +108,13 @@ mod hello_anchor {
       }
 
       pub fn apply_for_judge(ctx: Context<Apply_For_Judge>) -> Result<()>{
-          
+          let candidate = new Candidate {
+             name,
+             email,
+             proposal,
+             //votes are to be initialised to zero,
+             candidate_id,
+          };
       }
 
       pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: u64,choice2: u64,choice3: u64) -> Result<()>{
@@ -140,9 +146,9 @@ mod hello_anchor {
         // voting judges based on priority 
         // not properly implemented right now
          let vote_weight = voter_balance;
-          choice1.support += 5*vote_weight;
-          choice2.support += 3*vote_weight;
-          choice3.support += 1*vote_weight;
+          choice1.votes += 5*vote_weight;
+          choice2.votes += 3*vote_weight;
+          choice3.votes += 1*vote_weight;
           
         Ok(())
        
@@ -174,8 +180,15 @@ mod hello_anchor {
     }
      
 
-      pub fn submit_report(ctx: Context<Submit_Report>) -> Result<()>{
+      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: ) -> Result<()>{
+         // function to add the report on blockchain 
+         // hash of the data inserted and the contest id 
+         // both are bind together
          
+
+         //distribution of prizes to be done by this function too
+         // 75 % to be distributed equally rest by ranking
+         // different for different risk ratings
      }
 
       pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
@@ -188,7 +201,8 @@ mod hello_anchor {
       }
 
       pub fn vote_for_slash(ctx:Context<Vote_For_Slash>) -> Result<()>{
-          
+          // if a malicious activity by judges found by a member , slash the stakes of the judge and dont give their prize pool
+          // prize pool distributed to dao
       }
 }
 
@@ -210,6 +224,7 @@ pub struct Candidate {
     pub email: String,
     pub proposal: String,
     pub votes: u64,
+    pub candidate_id: u64,
 }
 
 pub struct GetCandidates<'info> {
