@@ -59,8 +59,8 @@ mod hello_anchor {
         governance_token_account: ctx.accounts.governance_token_account.clone(),
         proposal_account: ctx.accounts.proposal_account.clone(),
         title,
-        start_date,
-        end_date,
+        start_date = start_time,
+        end_date = end_time,
         prize_pool,
         proposal_id = encoded_hash;// created from contest info 
         proposal_eligible=false;
@@ -115,15 +115,17 @@ mod hello_anchor {
         
         // need to create proposal id with proposal attribute
         if(yes_votes > (66*total_votes_casted)/100 && total_votes_casted > 10*totalsupply/100){
-          proposal_eligible = true ;
+          accounts.proposal_eligible = true ;
         }else{
-          proposal_eligible = false ;
+          accounts.proposal_eligible = false ;
         }
           Ok(());
       }
      
       pub fn start_contest(ctx: Context<Start_Contest>) -> Result<()>{
           // bind the proposal id with specific user so as to act as owneer of proposal
+          
+          //option to trigger the contest needed
         let stake_left = 75*prize_pool/100;
 
           //add codebase
@@ -150,9 +152,11 @@ mod hello_anchor {
              votes=0;
              candidate_id = encoded_hash, 
           };
+
+          Ok(())
       }
 
-      pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: u64,choice2: u64,choice3: u64) -> Result<()>{
+      pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: String,choice2: String,choice3: String) -> Result<()>{
     
     let vote_account = &mut ctx.accounts.vote_account;
     let governance_token_account = &mut ctx.accounts.governance_token_account;
@@ -189,28 +193,29 @@ mod hello_anchor {
        
       }
     
-    pub fn get_candidates(
-        _ctx: Context<GetCandidates>,
-    ) -> ProgramResult {
-         let accounts = _ctx.accounts;
-
-    // Iterate through the list of candidate accounts and retrieve the number of votes for each candidate.
-    let mut candidate_votes: Vec<(Candidate, u32)> = accounts
-        .candidate_list
-        .to_account_infos()
-        .into_iter()
-        .map(|info| (Candidate::unpack(&info.data.borrow()).unwrap(), info.data.borrow().len() as u32))
-        .collect();
-
-    // Sort the list of candidates based on the number of votes they have received, in descending order.
-    candidate_votes.sort_by(|a, b| b.1.cmp(&a.1));
-    let judge: Vec<string> = vec![""; 3];
+      pub fn get_candidates(_ctx: Context<GetCandidates>) -> ProgramResult<Vec<String>> {
+        let accounts = _ctx.accounts;
     
-     for (i, (candidate, votes)) in candidate_votes.iter().enumerate().take(3) {
-        judge[i]=candidate.name;
-     }
-     
+        // Iterate through the list of candidate accounts and retrieve the number of votes for each candidate.
+        let mut candidate_votes: Vec<(Candidate, u32)> = accounts
+            .candidate_list
+            .to_account_infos()
+            .into_iter()
+            .map(|info| (Candidate::unpack(&info.data.borrow()).unwrap(), info.data.borrow().len() as u32))
+            .collect();
+    
+        // Sort the list of candidates based on the number of votes they have received, in descending order.
+        candidate_votes.sort_by(|a, b| b.1.cmp(&a.1));
+    
+        let mut judge: Vec<<String>> = vec![None; 3];
+    
+        for (i, (candidate, _)) in candidate_votes.iter().enumerate().take(3) {
+            judge[i] = Some(candidate.name);
+        }
+    
+        Ok(judge.into_iter().flatten().collect())
     }
+    
      
 
       pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: u64) -> Result<()>{
@@ -225,6 +230,7 @@ mod hello_anchor {
         }
 
       pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
+        
          let mut High_risk_rewardees: Vec<Vec<u32>> = Vec::new();
          let mut Medium_risk_rewardees: Vec<Vec<u32>> = Vec::new();
          let mut Report_rewardees: Vec<Vec<u32>> = Vec::new();
