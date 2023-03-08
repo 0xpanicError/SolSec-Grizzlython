@@ -9,7 +9,15 @@ declare_id!("11111111111111111111111111111111");
 mod hello_anchor {
     use super::*;
            
-    pub fn create_proposal(ctx: Context<Create_Proposal>,pool_prize: u64,days_b4_contest : u64,high_rish_value: u8,medium_risk_value: u8) -> Result<()>{
+    pub fn create_proposal(ctx: Context<Create_Proposal>,
+        pool_prize: u64,
+        days_b4_contest : u64,
+        high_rish_value: u8,
+        medium_risk_value: u8,
+        title: String,
+        prize_pool: u64) -> Result<()>{
+
+        // to be converted to sol    
         let min_amount = 10000;
         require!(pool_prize>min_amount);
 
@@ -19,8 +27,8 @@ mod hello_anchor {
         let start_time = ctx.accounts.clock.unix_timestamp +  days_b4_contest* 24 * 60 * 60;
         let end_date = start_time + contest_duration * 24 * 60 * 60;   
           
-        let judge_cut = 0.1*pool_prize;
-        let DAO_cut = 0.05*pool_prize;
+        let judge_cut = (10*pool_prize)/100;
+        let DAO_cut = (5*pool_prize)/100;
 
         // Variable cuts for vulnerabilities
         //should add up to 100
@@ -29,10 +37,10 @@ mod hello_anchor {
         let high_risk_pool = high_risk_vulnerability_percent*pool_prize;
         let medium_risk_vulnerability_percent = medium_risk_value; 
         let medium_risk_pool = medium_risk_vulnerability_percent*pool_prize;
-        let gas_report_and_low_risk_cut = (0.85 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
+        let gas_report_and_low_risk_cut = (85/100 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
 
         //stake 25 % of the pool prize 
-        let stake = 0.25*pool_prize;
+        let stake = 25*pool_prize/100;
         // where to put the stake ? will the contract have it ?
         let proposal = Proposal {
         authority: ctx.accounts.authority.clone(),
@@ -42,6 +50,7 @@ mod hello_anchor {
         start_date,
         end_date,
         prize_pool,
+        proposal_id = ;// to be created from contest info
         };
 
         Ok(());
@@ -92,7 +101,7 @@ mod hello_anchor {
       pub fn voting_verdict(ctx: <Voting_Verdict>) -> Result<()>{
         
         // need to create proposal id with proposal attribute
-        if(yes_votes > 0.66*total_votes_casted && total_votes_casted > 0.10*totalsupply){
+        if(yes_votes > (66*total_votes_casted)/100 && total_votes_casted > 10*totalsupply/100){
           proposal_id.eligible = true ;
         }else{
           proposal_id.eligible = false ;
@@ -102,18 +111,22 @@ mod hello_anchor {
      
       pub fn start_contest(ctx: Context<Start_Contest>) -> Result<()>{
           // bind the proposal id with specific user so as to act as owneer of proposal
-        let stake_left = 0.75*prize_pool;
+        let stake_left = 75*prize_pool/100;
 
           //add codebase
       }
 
-      pub fn apply_for_judge(ctx: Context<Apply_For_Judge>) -> Result<()>{
+      pub fn apply_for_judge(ctx: Context<Apply_For_Judge>,
+        name:String ,
+        email:String ,
+        proposal_id: u64 , // contest id of that protocol
+        ) -> Result<()>{
           let candidate = new Candidate {
              name,
              email,
-             proposal,
-             //votes are to be initialised to zero,
-             candidate_id,
+             proposal_id,
+             votes=0;
+             candidate_id = , //to be created with hash or something
           };
       }
 
@@ -180,7 +193,7 @@ mod hello_anchor {
     }
      
 
-      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: ) -> Result<()>{
+      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: u64) -> Result<()>{
          // function to add the report on blockchain 
          // hash of the data inserted and the contest id 
          // both are bind together
@@ -189,7 +202,7 @@ mod hello_anchor {
          //distribution of prizes to be done by this function too
          // 75 % to be distributed equally rest by ranking
          // different for different risk ratings
-     }
+        }
 
       pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
          let mut High_risk_rewardees: Vec<Vec<u32>> = Vec::new();
@@ -216,13 +229,14 @@ pub struct Proposal {
     pub start_date: String,
     pub end_date: String,
     pub prize_pool: u64,
+    pub proposal_id: u64,
 }
 
 #[derive(Accounts)]
 pub struct Candidate {
     pub name: String,
     pub email: String,
-    pub proposal: String,
+    pub proposal_id: u64,
     pub votes: u64,
     pub candidate_id: u64,
 }
