@@ -224,9 +224,6 @@ mod hello_anchor {
          // both are bind together
          
 
-         //distribution of prizes to be done by this function too
-         // 75 % to be distributed equally rest by ranking
-         // different for different risk ratings
         }
 
       pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
@@ -238,11 +235,65 @@ mod hello_anchor {
         // how are we getting the user input ??
           
       }
-
+    
       pub fn vote_for_slash(ctx:Context<Vote_For_Slash>) -> Result<()>{
+          // Everytime the contest ends , this function also opens 
+          // need overwhelming mojority to slash their tokens 
+          // discussion and proof expected to be done off chain
           // if a malicious activity by judges found by a member , slash the stakes of the judge and dont give their prize pool
           // prize pool distributed to dao
+
+          let vote_account = &mut ctx.accounts.vote_account;
+          let governance_token_account = &mut ctx.accounts.governance_token_account;
+          let voter = &ctx.accounts.voter;
+      
+          // Check if the governance token is owned by the program.
+          if governance_token_account.owner != *ctx.program_id {
+              return Err(ErrorCode::NotProgramToken.into());
+          }
+      
+          // Check if the voter has enough tokens to cast a vote.
+          let voter_balance = governance_token_account.balance;
+          if voter_balance == 0 {
+              return Err(ErrorCode::InsufficientTokens.into());
+          }
+          
+          let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+          let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+          let voting_start_time = proposal.voting_start_time;
+          let voting_end_time = voting_start_time + voting_period;
+        
+          if current_time < voting_start_time || current_time > voting_end_time {
+          return Err(ErrorCode::VotingPeriodOver.into());
+          }
+          
+          match vote_type {
+            VoteType::YES => {
+                msg!("Voted for YES 🤝");
+                 let vote_weight = voter_balance;
+                 vote_account.yes += vote_weight; 
+            },
+            VoteType::NO => {
+                msg!("Voted for NO 🤞");
+                 let vote_weight = voter_balance;
+                 vote_account.no += vote_weight;
+            },
+        };
+
+        Ok(())
       }
+
+
+      pub fn close_contest(ctx:Context<Close_Contest>) -> Result<()>{
+        
+        // check result of vote_for_slash
+
+       // distribute funds
+
+       // close contest 
+         
+     }
+
 }
 
 #[derive(Accounts)]
