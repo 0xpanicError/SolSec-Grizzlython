@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 use std::time::{Duration, SystemTime};
+use crypto_hash::{Algorithm, hex_digest};
+use base64::encode;
 
 // This is your program's public key and it will update
 // automatically when you build the project.
@@ -42,6 +44,16 @@ mod hello_anchor {
         //stake 25 % of the pool prize 
         let stake = 25*pool_prize/100;
         // where to put the stake ? will the contract have it ?
+
+        let data1 = pool_prize.as_bytes();
+        let data2 = title.as_bytes();
+        let data3 = start_time.as_bytes();
+        let data4 = end_time.as_bytes();
+
+        let combined_data = [data1, data2, data3, data4].concat();
+        let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
+        let encoded_hash = encode(&hash_output);
+
         let proposal = Proposal {
         authority: ctx.accounts.authority.clone(),
         governance_token_account: ctx.accounts.governance_token_account.clone(),
@@ -50,7 +62,8 @@ mod hello_anchor {
         start_date,
         end_date,
         prize_pool,
-        proposal_id = ;// to be created from contest info
+        proposal_id = encoded_hash;// created from contest info 
+        proposal_eligible=false;
         };
 
         Ok(());
@@ -102,9 +115,9 @@ mod hello_anchor {
         
         // need to create proposal id with proposal attribute
         if(yes_votes > (66*total_votes_casted)/100 && total_votes_casted > 10*totalsupply/100){
-          proposal_id.eligible = true ;
+          proposal_eligible = true ;
         }else{
-          proposal_id.eligible = false ;
+          proposal_eligible = false ;
         }
           Ok(());
       }
@@ -119,14 +132,23 @@ mod hello_anchor {
       pub fn apply_for_judge(ctx: Context<Apply_For_Judge>,
         name:String ,
         email:String ,
-        proposal_id: u64 , // contest id of that protocol
+        proposal_id: String , // contest id of that protocol
         ) -> Result<()>{
+
+          let data1 = name.as_bytes();
+          let data2 = email.as_bytes();
+          let data3 = proposal_id.as_bytes();
+          
+          let combined_data = [data1, data2, data3].concat();
+          let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
+          let encoded_hash = encode(&hash_output);
+
           let candidate = new Candidate {
              name,
              email,
              proposal_id,
              votes=0;
-             candidate_id = , //to be created with hash or something
+             candidate_id = encoded_hash, 
           };
       }
 
@@ -182,11 +204,9 @@ mod hello_anchor {
 
     // Sort the list of candidates based on the number of votes they have received, in descending order.
     candidate_votes.sort_by(|a, b| b.1.cmp(&a.1));
-    let my_vec: Vec<string> = vec![""; 10];
-    // Print the top three candidates based on the number of votes they have received.
-    // println!("Top three candidates:");
+    let judge: Vec<string> = vec![""; 3];
+    
      for (i, (candidate, votes)) in candidate_votes.iter().enumerate().take(3) {
-        // println!("{}: {:?} ({} votes)", i + 1, candidate, votes);
         judge[i]=candidate.name;
      }
      
@@ -229,7 +249,8 @@ pub struct Proposal {
     pub start_date: String,
     pub end_date: String,
     pub prize_pool: u64,
-    pub proposal_id: u64,
+    pub proposal_id: String,
+    pub proposal_eligible: bool,
 }
 
 #[derive(Accounts)]
@@ -238,7 +259,7 @@ pub struct Candidate {
     pub email: String,
     pub proposal_id: u64,
     pub votes: u64,
-    pub candidate_id: u64,
+    pub candidate_id: String,
 }
 
 pub struct GetCandidates<'info> {
