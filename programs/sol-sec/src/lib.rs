@@ -62,8 +62,9 @@ mod hello_anchor {
         start_date = start_time,
         end_date = end_time,
         prize_pool,
-        proposal_id = encoded_hash;// created from contest info 
-        proposal_eligible=false;
+        proposal_id = encoded_hash,// created from contest info 
+        proposal_eligible=false,
+        success=true,
         };
 
         Ok(());
@@ -123,10 +124,10 @@ mod hello_anchor {
       }
      
       pub fn start_contest(ctx: Context<Start_Contest>) -> Result<()>{
-          // bind the proposal id with specific user so as to act as owneer of proposal
+          // bind the proposal id with specific user so as to act as owner of proposal
           
           //option to trigger the contest needed
-        let stake_left = 75*prize_pool/100;
+          let stake_left = 75*prize_pool/100;
 
           //add codebase
       }
@@ -152,7 +153,7 @@ mod hello_anchor {
              votes=0;
              candidate_id = encoded_hash, 
           };
-
+           
           Ok(())
       }
 
@@ -218,25 +219,38 @@ mod hello_anchor {
     
      
 
-      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: u64) -> Result<()>{
+      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: String) -> Result<()>{
          // function to add the report on blockchain 
-         // hash of the data inserted and the contest id 
+         // hash of the data inserted and the proposal id 
          // both are bind together
-         
+           let contestDATA = new Contestdata {
+            hash,
+            proposal_id,
+           };
+           // how to store the data on blockchain
 
-        }
+           Ok(())
+         }
 
-      pub fn propose_report(ctx:Context<Propose_Report>) -> Result<()>{
+      pub fn propose_report(ctx:Context<Propose_Report>,
+         proposal_id: String, 
+         high_risk_rewardees: Vec<Vec<String>> ,
+         medium_risk_rewardees: Vec<Vec<String>> ,
+         report_rewardees: Vec<Vec<String>>  ,
+        ) -> Result<()>{
+
+        let contestWinners = new ContestWinners {
+         proposal_id,
+         high_risk_rewardees,
+         medium_risk_rewardees,
+         report_rewardees, 
+        };
         
-         let mut High_risk_rewardees: Vec<Vec<u32>> = Vec::new();
-         let mut Medium_risk_rewardees: Vec<Vec<u32>> = Vec::new();
-         let mut Report_rewardees: Vec<Vec<u32>> = Vec::new();
-
-        // how are we getting the user input ??
-          
+        Ok(())
       }
     
       pub fn vote_for_slash(ctx:Context<Vote_For_Slash>) -> Result<()>{
+        
           // Everytime the contest ends , this function also opens 
           // need overwhelming mojority to slash their tokens 
           // discussion and proof expected to be done off chain
@@ -308,6 +322,7 @@ pub struct Proposal {
     pub prize_pool: u64,
     pub proposal_id: String,
     pub proposal_eligible: bool,
+    pub success: bool,
 }
 
 #[derive(Accounts)]
@@ -318,6 +333,16 @@ pub struct Candidate {
     pub votes: u64,
     pub candidate_id: String,
 }
+
+#derive[(Accounts)]
+pub struct ContestWinners {
+    pub proposal_id: String,
+    #[account(mut)]
+    pub high_risk_rewardees: Vec<Vec<String>> ,
+    pub medium_risk_rewardees: Vec<Vec<String>> ,
+    pub report_rewardees: Vec<Vec<String>>  ,
+}
+
 
 pub struct GetCandidates<'info> {
     // to get the list of candidates
@@ -369,6 +394,14 @@ pub struct GovernanceToken {
     pub owner: Pubkey,
     pub balance: u64,
 }
+
+// where to put this
+#[account]
+pub struct Contestdata {
+     pub hash : u8,
+     pub proposal_id : String,
+}
+
 #[derive(Default)]
 pub struct VoteBank {
     yes: u64, // 8 bytes in size
