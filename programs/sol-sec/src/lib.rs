@@ -391,13 +391,16 @@ pub authority: Signer<'info>,
     init,
     payer = authority,
     space = 256,
-    seeds = [b"stake".as_ref(),authority.key().as_ref()], 
+    seeds = [b"stake".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
     bump
 )]
 pub stake_account: Box<Account<'info, StakeAccount>>,
 
 pub system_program: Program<'info, System>,
+
 pub rent: Sysvar<'info, Rent>,
+#[account(mut)]
+pub proposal_id: AccountInfo<'info>,
 
 }
                           
@@ -430,14 +433,15 @@ pub struct Start_Contest<'info> {
         init,
         payer = authority,
         space = 256,
-        seeds = [b"stake".as_ref(),authority.key().as_ref()], 
+        seeds = [b"stake".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
         bump
     )]
     pub stake_account: Box<Account<'info, StakeAccount>>,
     
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    
+    #[account(mut)]
+pub proposal_id: AccountInfo<'info>,
 }
 
 pub struct Apply_For_Judge<'info> {
