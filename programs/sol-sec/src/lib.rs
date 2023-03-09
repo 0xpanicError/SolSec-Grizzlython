@@ -71,6 +71,11 @@ mod hello_anchor {
       }
 
     pub fn vote_for_proposal(ctx: Context<Vote_For_Proposal>,vote_type: VoteType) -> Result<()>{
+     // where to deefine voting_end variable
+    if(voting_end == true){
+        Ok(())
+    }     
+
     let vote_account = &mut ctx.accounts.vote_account;
     let governance_token_account = &mut ctx.accounts.governance_token_account;
     let voter = &ctx.accounts.voter;
@@ -106,6 +111,16 @@ mod hello_anchor {
                  let vote_weight = voter_balance;
                  vote_account.no += vote_weight;
             },
+        
+        let end = false;
+        if(current_time > voting_end_time){
+            end = true;
+        }
+        
+        if(end == true){
+            voting_verdict();
+            voting_end= true;
+        }
         };
         Ok(())
 
@@ -130,6 +145,7 @@ mod hello_anchor {
           let stake_left = 75*prize_pool/100;
 
           //add codebase
+          Ok(())
       }
 
       pub fn apply_for_judge(ctx: Context<Apply_For_Judge>,
@@ -218,16 +234,19 @@ mod hello_anchor {
     }
     
      
-
-      pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: String) -> Result<()>{
+         #[access_control(SubmitReport::accounts(&ctx, &report_hash, &proposal_id))]
+         pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: String) -> Result<()>{
          // function to add the report on blockchain 
          // hash of the data inserted and the proposal id 
          // both are bind together
-           let contestDATA = new Contestdata {
+           let contest_data= new ContestDataInner {
             hash,
             proposal_id,
            };
            // how to store the data on blockchain
+           let contest_data_account = &mut ctx.accounts.data;
+           contest_data_account.hash = contest_data.hash;
+           contest_data_account.proposal_id = contest_data.proposal_id;
 
            Ok(())
          }
@@ -239,18 +258,25 @@ mod hello_anchor {
          report_rewardees: Vec<Vec<String>>  ,
         ) -> Result<()>{
 
-        let contestWinners = new ContestWinners {
+        let contestWinners = new WinnerDataInner {
          proposal_id,
          high_risk_rewardees,
          medium_risk_rewardees,
          report_rewardees, 
         };
         
+        let contest_winners_account = & mut ctx.accounts.data;
+        contest_data_account.proposal_id = contestWinners.proposal_id;
+        contest_data_account.high_risk_rewardees = contestWinners.high_risk_rewardees;
+        contest_data_account.medium_risk_rewardees = contestWinners.medium_risk_rewardees;
+        contest_data_account.report_rewardees = contestWinners.report_rewardees;
+
         Ok(())
+        
       }
     
       pub fn vote_for_slash(ctx:Context<Vote_For_Slash>) -> Result<()>{
-        
+
           // Everytime the contest ends , this function also opens 
           // need overwhelming mojority to slash their tokens 
           // discussion and proof expected to be done off chain
@@ -305,7 +331,7 @@ mod hello_anchor {
        // distribute funds
 
        // close contest 
-         
+         Ok(())
      }
 
 }
@@ -333,16 +359,6 @@ pub struct Candidate {
     pub votes: u64,
     pub candidate_id: String,
 }
-
-#derive[(Accounts)]
-pub struct ContestWinners {
-    pub proposal_id: String,
-    #[account(mut)]
-    pub high_risk_rewardees: Vec<Vec<String>> ,
-    pub medium_risk_rewardees: Vec<Vec<String>> ,
-    pub report_rewardees: Vec<Vec<String>>  ,
-}
-
 
 pub struct GetCandidates<'info> {
     // to get the list of candidates
@@ -388,18 +404,41 @@ pub struct Vote_For_Slash<'info> {
     
 }
 
+#[derive(Accounts)]
+pub struct WinnerData<'info> {
+    #[account(init, payer = user, space = 64)]
+    pub data: Account<'info, WinnerDataInner>,
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Default, BorshSerialize, BorshDeserialize)]
+pub struct WinnerDataInner {
+    pub proposal_id: String,
+    #[account(mut)]
+    pub high_risk_rewardees: Vec<Vec<String>> ,
+    pub medium_risk_rewardees: Vec<Vec<String>> ,
+    pub report_rewardees: Vec<Vec<String>>  ,
+}
+
+#[derive(Accounts)]
+pub struct ContestData<'info> {
+    #[account(init, payer = user, space = 64)]
+    pub data: Account<'info, ContestDataInner>,
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Default, BorshSerialize, BorshDeserialize)]
+pub struct ContestDataInner {
+    pub hash: u8,
+    pub proposal_id: String,
+}
 
 #[account]
 pub struct GovernanceToken {
     pub owner: Pubkey,
     pub balance: u64,
-}
-
-// where to put this
-#[account]
-pub struct Contestdata {
-     pub hash : u8,
-     pub proposal_id : String,
 }
 
 #[derive(Default)]
