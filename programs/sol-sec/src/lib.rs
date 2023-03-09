@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use std::time::{Duration, SystemTime};
 use crypto_hash::{Algorithm, hex_digest};
 use base64::encode;
+use anchor_lang::solana_program::{self,system_program, sysvar::rent::Rent,};
 
 // This is your program's public key and it will update
 // automatically when you build the project.
@@ -25,7 +26,7 @@ mod hello_anchor {
 
         //a minimum time is to be decided upon after acception
           
-        //currently gets current time
+        
         let start_time = ctx.accounts.clock.unix_timestamp +  days_b4_contest* 24 * 60 * 60;
         let end_date = start_time + contest_duration * 24 * 60 * 60;   
           
@@ -41,10 +42,6 @@ mod hello_anchor {
         let medium_risk_pool = medium_risk_vulnerability_percent*pool_prize;
         let gas_report_and_low_risk_cut = (85/100 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
 
-        //stake 25 % of the pool prize 
-        let stake = 25*pool_prize/100;
-        // where to put the stake ? will the contract have it ?
-
         let data1 = pool_prize.as_bytes();
         let data2 = title.as_bytes();
         let data3 = start_time.as_bytes();
@@ -53,6 +50,18 @@ mod hello_anchor {
         let combined_data = [data1, data2, data3, data4].concat();
         let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
         let encoded_hash = encode(&hash_output);
+        //stake 25 % of the pool prize 
+        // how to implement
+        let stake_account = &mut ctx.accounts.stake_account;
+        
+        stake_account.stake = 25*pool_prize/100;
+        stake_account.staker = ctx.accounts.authority.key();
+        stake_account.bump = *ctx.bumps.get("stake_account").unwrap();
+        stake_account.proposal_id = encoded_hash;
+
+        // where to put the stake ? which account will have it ?
+        // ans = PDA account 
+
 
         let proposal = Proposal {
         authority: ctx.accounts.authority.clone(),
@@ -71,7 +80,8 @@ mod hello_anchor {
       }
 
     pub fn vote_for_proposal(ctx: Context<Vote_For_Proposal>,vote_type: VoteType) -> Result<()>{
-     // where to deefine voting_end variable
+    
+        // where to define voting_end variable
     if(voting_end == true){
         Ok(())
     }     
@@ -91,10 +101,10 @@ mod hello_anchor {
         return Err(ErrorCode::InsufficientTokens.into());
     }
 
-    //no proposal struct yet
+    
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
     let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
-    let voting_start_time = proposal.voting_start_time;
+    let voting_start_time = proposal.voting_start_time; // how to ensure correct proposal is selected
     let voting_end_time = voting_start_time + voting_period;
         
     if current_time < voting_start_time || current_time > voting_end_time {
@@ -140,10 +150,10 @@ mod hello_anchor {
      
       pub fn start_contest(ctx: Context<Start_Contest>) -> Result<()>{
           // bind the proposal id with specific user so as to act as owner of proposal
-          
+          /// already binded with proposal with authority
           //option to trigger the contest needed
           let stake_left = 75*prize_pool/100;
-
+          stake_account.stake = stake_account.stake + stake_left;
           //add codebase
           Ok(())
       }
@@ -161,7 +171,8 @@ mod hello_anchor {
           let combined_data = [data1, data2, data3].concat();
           let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
           let encoded_hash = encode(&hash_output);
-
+          
+          // add contestants using PDA , it can also act as a mapping
           let candidate = new Candidate {
              name,
              email,
@@ -173,7 +184,7 @@ mod hello_anchor {
           Ok(())
       }
 
-      pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: String,choice2: String,choice3: String) -> Result<()>{
+    pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: String,choice2: String,choice3: String) -> Result<()>{
     
     let vote_account = &mut ctx.accounts.vote_account;
     let governance_token_account = &mut ctx.accounts.governance_token_account;
@@ -209,11 +220,13 @@ mod hello_anchor {
         Ok(())
        
       }
-    
+       
+      // where to store the judges ??
+      //need only till the contest ends
       pub fn get_candidates(_ctx: Context<GetCandidates>) -> ProgramResult<Vec<String>> {
         let accounts = _ctx.accounts;
     
-        // Iterate through the list of candidate accounts and retrieve the number of votes for each candidate.
+        
         let mut candidate_votes: Vec<(Candidate, u32)> = accounts
             .candidate_list
             .to_account_infos()
@@ -236,13 +249,12 @@ mod hello_anchor {
      
          #[access_control(SubmitReport::accounts(&ctx, &report_hash, &proposal_id))]
          pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: String) -> Result<()>{
-         // function to add the report on blockchain 
-         // hash of the data inserted and the proposal id 
-         // both are bind together
+         
            let contest_data= new ContestDataInner {
             hash,
             proposal_id,
            };
+
            // how to store the data on blockchain
            let contest_data_account = &mut ctx.accounts.data;
            contest_data_account.hash = contest_data.hash;
@@ -272,7 +284,7 @@ mod hello_anchor {
         contest_data_account.report_rewardees = contestWinners.report_rewardees;
 
         Ok(())
-        
+
       }
     
       pub fn vote_for_slash(ctx:Context<Vote_For_Slash>) -> Result<()>{
@@ -300,7 +312,7 @@ mod hello_anchor {
           
           let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
           let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
-          let voting_start_time = proposal.voting_start_time;
+          let voting_start_time = proposal.voting_start_time; // not implemented here too
           let voting_end_time = voting_start_time + voting_period;
         
           if current_time < voting_start_time || current_time > voting_end_time {
@@ -327,12 +339,14 @@ mod hello_anchor {
       pub fn close_contest(ctx:Context<Close_Contest>) -> Result<()>{
         
         // check result of vote_for_slash
-
+       
        // distribute funds
+       // for now distribute equally 
 
        // close contest 
          Ok(())
      }
+    
 
 }
 
@@ -343,8 +357,8 @@ pub struct Proposal {
     pub governance_token_account: Account<'info, GovernanceTokenAccount>,
     pub proposal_account: Account<'info, ProposalAccount>,
     pub title: String,
-    pub start_date: String,
-    pub end_date: String,
+    pub start_date: u64,
+    pub end_date: u64,
     pub prize_pool: u64,
     pub proposal_id: String,
     pub proposal_eligible: bool,
@@ -359,7 +373,7 @@ pub struct Candidate {
     pub votes: u64,
     pub candidate_id: String,
 }
-
+ 
 pub struct GetCandidates<'info> {
     // to get the list of candidates
     #[account(address = "")]
@@ -368,8 +382,26 @@ pub struct GetCandidates<'info> {
 
 pub struct Create_Proposal<'info> {
  clock: Sysvar<'info, Clock>,
+ #[account(
+    mut,
+)]
+pub authority: Signer<'info>,
+
+#[account(
+    init,
+    payer = authority,
+    space = 256,
+    seeds = [b"stake".as_ref(),authority.key().as_ref()], 
+    bump
+)]
+pub stake_account: Box<Account<'info, StakeAccount>>,
+
+pub system_program: Program<'info, System>,
+pub rent: Sysvar<'info, Rent>,
+
 }
-                            
+                          
+
 pub struct Vote_For_Proposal<'info> {
    
     #[account(has_one = governance_token)]
@@ -389,8 +421,25 @@ pub struct Get_Votes<'info>{
 }
 
 pub struct Start_Contest<'info> {
+    #[account(
+        mut,
+    )]
+    pub authority: Signer<'info>,
+    
+    #[account(
+        init,
+        payer = authority,
+        space = 256,
+        seeds = [b"stake".as_ref(),authority.key().as_ref()], 
+        bump
+    )]
+    pub stake_account: Box<Account<'info, StakeAccount>>,
+    
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
     
 }
+
 pub struct Apply_For_Judge<'info> {
     
 }
@@ -446,6 +495,16 @@ pub struct VoteBank {
     yes: u64, // 8 bytes in size
     no: u64, // 8 bytes in size
 }
+
+#[derive(Default)]
+pub struct StakeAccount {
+    pub staker = Pubkey, 
+    pub proposal_id = String,
+    pub bump: u8
+    #[account(mut)]
+    pub stake : u64,
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub enum VoteType {
     YES,
