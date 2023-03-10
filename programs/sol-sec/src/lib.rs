@@ -62,7 +62,7 @@ mod hello_anchor {
         // where to put the stake ? which account will have it ?
         // ans = PDA account 
 
-
+        
         let proposal = Proposal {
         authority: ctx.accounts.authority.clone(),
         governance_token_account: ctx.accounts.governance_token_account.clone(),
@@ -81,10 +81,7 @@ mod hello_anchor {
 
     pub fn vote_for_proposal(ctx: Context<Vote_For_Proposal>,vote_type: VoteType) -> Result<()>{
     
-        // where to define voting_end variable
-    if(voting_end == true){
-        Ok(())
-    }     
+        // where to define voting_end variable  
 
     let vote_account = &mut ctx.accounts.vote_account;
     let governance_token_account = &mut ctx.accounts.governance_token_account;
@@ -102,10 +99,10 @@ mod hello_anchor {
     }
 
     
-    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-    let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
-    let voting_start_time = proposal.voting_start_time; // how to ensure correct proposal is selected
-    let voting_end_time = voting_start_time + voting_period;
+    // let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    // let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+    // let voting_start_time = proposal.voting_start_time; // how to ensure correct proposal is selected
+    // let voting_end_time = voting_start_time + voting_period;
         
     if current_time < voting_start_time || current_time > voting_end_time {
         return Err(ErrorCode::VotingPeriodOver.into());
@@ -129,21 +126,27 @@ mod hello_anchor {
         
         if(end == true){
             voting_verdict();
-            voting_end= true;
         }
         };
         Ok(())
 
-          // delegation of power ??
+          
       }
 
       pub fn voting_verdict(ctx: <Voting_Verdict>) -> Result<()>{
         
+        let vote_account = &mut ctx.accounts.vote_account;
+        let yes_votes = vote_account.yes;
+        let total_votes_casted = vote_account.yes + vote_account.no;
+        
+        let proposal_account = &mut ctx.accounts.proposal_account;
+        // no governance token implementation yet
         // need to create proposal id with proposal attribute
-        if(yes_votes > (66*total_votes_casted)/100 && total_votes_casted > 10*totalsupply/100){
-          accounts.proposal_eligible = true ;
+        /*&& total_votes_casted > 10*totalsupply/100*/
+        if(yes_votes > (66*total_votes_casted)/100 ){
+          proposal_account.proposal_eligible = true ;
         }else{
-          accounts.proposal_eligible = false ;
+          proposal_account.proposal_eligible = false ;
         }
           Ok(());
       }
@@ -186,7 +189,11 @@ mod hello_anchor {
 
     pub fn vote_for_judge(ctx: Context<Vote_For_Judge>,choice1: String,choice2: String,choice3: String) -> Result<()>{
     
-    let vote_account = &mut ctx.accounts.vote_account;
+    //let vote_account = &mut ctx.accounts.vote_account;
+      let choice1 = &mut ctx.accounts.candidates_acc.name(choice1);
+      let choice2 = &mut ctx.accounts.candidates_acc.name(choice2);
+      let choice3 = &mut ctx.accounts.candidates_acc.name(choice3);
+
     let governance_token_account = &mut ctx.accounts.governance_token_account;
     let voter = &ctx.accounts.voter;
 
@@ -194,7 +201,7 @@ mod hello_anchor {
     if governance_token_account.owner != *ctx.program_id {
         return Err(ErrorCode::NotProgramToken.into());
     }
-
+     
     // Check if the voter has enough tokens to cast a vote.
     let voter_balance = governance_token_account.balance;
     if voter_balance == 0 {
@@ -202,10 +209,10 @@ mod hello_anchor {
     }
 
     //no proposal struct yet
-    let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-    let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
-    let voting_start_time = proposal.voting_start_time;
-    let voting_end_time = voting_start_time + voting_period;
+    // let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    // let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+    // let voting_start_time = proposal.voting_start_time;
+    // let voting_end_time = voting_start_time + voting_period;
         
     if current_time < voting_start_time || current_time > voting_end_time {
         return Err(ErrorCode::VotingPeriodOver.into());
@@ -224,9 +231,8 @@ mod hello_anchor {
       // where to store the judges ??
       //need only till the contest ends
       pub fn get_candidates(_ctx: Context<GetCandidates>) -> ProgramResult<Vec<String>> {
-        let accounts = _ctx.accounts;
+        let accounts =  &mut _ctx.accounts;
     
-        
         let mut candidate_votes: Vec<(Candidate, u32)> = accounts
             .candidate_list
             .to_account_infos()
@@ -294,8 +300,8 @@ mod hello_anchor {
           // discussion and proof expected to be done off chain
           // if a malicious activity by judges found by a member , slash the stakes of the judge and dont give their prize pool
           // prize pool distributed to dao
-
-          let vote_account = &mut ctx.accounts.vote_account;
+      
+          let vote_account = &mut ctx.accounts.vote_for_slash_account;
           let governance_token_account = &mut ctx.accounts.governance_token_account;
           let voter = &ctx.accounts.voter;
       
@@ -310,10 +316,10 @@ mod hello_anchor {
               return Err(ErrorCode::InsufficientTokens.into());
           }
           
-          let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
-          let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
-          let voting_start_time = proposal.voting_start_time; // not implemented here too
-          let voting_end_time = voting_start_time + voting_period;
+        //   let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+        //   let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+        //   let voting_start_time = proposal.voting_start_time; // not implemented here too
+        //   let voting_end_time = voting_start_time + voting_period;
         
           if current_time < voting_start_time || current_time > voting_end_time {
           return Err(ErrorCode::VotingPeriodOver.into());
@@ -339,10 +345,17 @@ mod hello_anchor {
       pub fn close_contest(ctx:Context<Close_Contest>) -> Result<()>{
         
         // check result of vote_for_slash
-       
+        let vote_account = &mut ctx.accounts.vote_for_slash_account;
+        if(vote_account.yes > 3* vote_account.no){
+            proposal_account.proposal_eligible = false ;
+        }
+             
        // distribute funds
        // for now distribute equally 
-
+       if(proposal_account.proposal_eligible == false){
+        //distribute from staked account
+       }
+       
        // close contest 
          Ok(())
      }
@@ -350,7 +363,7 @@ mod hello_anchor {
 
 }
 
-#[derive(Accounts)]
+#[account]
 pub struct Proposal {
     //proposal by the protocol
     pub authority: Signer<'info>,
@@ -365,7 +378,9 @@ pub struct Proposal {
     pub success: bool,
 }
 
-#[derive(Accounts)]
+
+
+#[derive]
 pub struct Candidate {
     pub name: String,
     pub email: String,
@@ -395,6 +410,23 @@ pub authority: Signer<'info>,
     bump
 )]
 pub stake_account: Box<Account<'info, StakeAccount>>,
+
+#[account(
+    init,
+    payer = authority,
+    space = 256,
+    seeds = [b"proposal".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
+    bump
+)]
+pub proposal_account : Account<'info,Proposal>,
+
+#[account(
+    init, 
+    payer = authority, 
+    space = 256, 
+)] 
+pub vote_account: Account<'info, VoteBank>,
+
 
 pub system_program: Program<'info, System>,
 
@@ -429,33 +461,59 @@ pub struct Start_Contest<'info> {
     )]
     pub authority: Signer<'info>,
     
-    #[account(
-        init,
-        payer = authority,
-        space = 256,
-        seeds = [b"stake".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
-        bump
-    )]
+    #[account(mut)]
     pub stake_account: Box<Account<'info, StakeAccount>>,
     
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
-    #[account(mut)]
-pub proposal_id: AccountInfo<'info>,
+    
 }
 
 pub struct Apply_For_Judge<'info> {
+    #[account(
+        mut,
+    )]
+    pub authority: Signer<'info>,
     
+    #[account(
+        init,
+        payer = authority,
+        space = 256,
+        seeds = [b"judge_4_good".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
+        bump
+    )]
+    pub candidates_acc: <Account<'info, Candidate>>,
+    
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 pub struct Vote_For_Judge<'info> {
-    
+    #[account(mut)]
+    pub candidates_acc: <Account<'info, Candidate>>,
 }
 pub struct Submit_Report<'info> {
-    
+    pub authority: Signer<'info>,
+    #[account(
+        init, 
+        payer = authority, 
+        space = 256, 
+    )] 
+    pub vote_for_slash_account: Account<'info, VoteBank>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>, 
 }
 pub struct Vote_For_Slash<'info> {
-    
+    #[account(mut)]
+    pub vote_for_slash_account: Account<'info, VoteBank>,
 }
+
+pub struct Close_Contest<'info> {
+    #[account]
+    pub vote_for_slash_account: Account<'info, VoteBank>,
+    #[account(mut)]
+    pub stake_account: Box<Account<'info, StakeAccount>>,
+}
+
 
 #[derive(Accounts)]
 pub struct WinnerData<'info> {
