@@ -45,14 +45,14 @@ mod hello_anchor {
         let quality_assurance_pool = quality_assurance_percent*pool_prize;
         let gas_report = (70/100 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
 
-        // let data1 = pool_prize.as_bytes();
-        // let data2 = title.as_bytes();
-        // let data3 = start_time.as_bytes();
-        // let data4 = end_time.as_bytes();
+        let data1 = pool_prize.as_bytes();
+        let data2 = title.as_bytes();
+        let data3 = start_time.as_bytes();
+        let data4 = end_time.as_bytes();
 
-        // let combined_data = [data1, data2, data3, data4].concat();
-        // let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
-        // let encoded_hash = encode(&hash_output);
+        let combined_data = [data1, data2, data3, data4].concat();
+        let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
+        let encoded_hash = encode(&hash_output);
         //stake 25 % of the pool prize 
         // how to implement
         let stake_account = &mut ctx.accounts.stake_account;
@@ -74,7 +74,7 @@ mod hello_anchor {
         start_date : start_time,
         end_date : end_time,
         prize_pool,
-        proposal_id : data_hash,// created from contest info 
+        proposal_id : encoded_hash,// created from contest info 
         proposal_eligible:false,
         success:true,
         };
