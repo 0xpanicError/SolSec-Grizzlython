@@ -74,7 +74,7 @@ mod hello_anchor {
         start_date : start_time,
         end_date : end_time,
         prize_pool,
-        proposal_id : encoded_hash,// created from contest info 
+        proposal_id : data_hash,// created from contest info 
         proposal_eligible:false,
         success:true,
         };
@@ -144,9 +144,9 @@ mod hello_anchor {
         let total_votes_casted = vote_account.yes + vote_account.no;
         
         let proposal_account = &mut ctx.accounts.proposal_account;
-        // no governance token implementation yet
-        // need to create proposal id with proposal attribute
-        /*&& total_votes_casted > 10*totalsupply/100*/
+        
+        
+       
         if(yes_votes > (66*total_votes_casted)/100 ){
           proposal_account.proposal_eligible = true ;
         }else{
@@ -158,10 +158,10 @@ mod hello_anchor {
       pub fn start_contest(ctx: Context<Start_Contest>) -> Result<()>{
           // bind the proposal id with specific user so as to act as owner of proposal
           /// already binded with proposal with authority
-          //option to trigger the contest needed
+          
           let stake_left = 75*prize_pool/100;
           stake_account.stake = stake_account.stake + stake_left;
-          //add codebase
+        
           Ok(())
       }
 
@@ -212,7 +212,7 @@ mod hello_anchor {
         return Err(ErrorCode::InsufficientTokens.into());
     }
 
-    //no proposal struct yet
+   
     // let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
     // let voting_period = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
     // let voting_start_time = proposal.voting_start_time;
@@ -222,7 +222,7 @@ mod hello_anchor {
         return Err(ErrorCode::VotingPeriodOver.into());
     }
         // voting judges based on priority 
-        // not properly implemented right now
+        
          let vote_weight = voter_balance;
           choice1.votes += 5*vote_weight;
           choice2.votes += 3*vote_weight;
@@ -232,8 +232,7 @@ mod hello_anchor {
        
       
        
-      // where to store the judges ??
-      //need only till the contest ends
+      
       pub fn get_candidates(_ctx: Context<GetCandidates>) -> ProgramResult<Vec<String>> {
         let accounts =  &mut _ctx.accounts;
     
