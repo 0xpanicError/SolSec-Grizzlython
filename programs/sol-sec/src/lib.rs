@@ -15,9 +15,10 @@ mod hello_anchor {
     pub fn create_proposal(ctx: Context<Create_Proposal>,
         pool_prize: u64,
         days_b4_contest : u64,
-        high_rish_value: u8,
-        medium_risk_value: u8,
-        title: String,
+        high_risk_percent: u8,
+        medium_risk_percent: u8,
+        quality_assurance_percent: u8,
+        data_hash: u8, //check datatype
         prize_pool: u64) -> Result<()>{
 
         // to be converted to sol    
@@ -30,26 +31,28 @@ mod hello_anchor {
         let start_time = ctx.accounts.clock.unix_timestamp +  days_b4_contest* 24 * 60 * 60;
         let end_date = start_time + contest_duration * 24 * 60 * 60;   
           
-        let judge_cut = (10*pool_prize)/100;
-        let DAO_cut = (5*pool_prize)/100;
+        let judge_cut = (15*pool_prize)/100;
+        let DAO_cut = (15*pool_prize)/100;
 
         // Variable cuts for vulnerabilities
         //should add up to 100
         //value taken in percent/100  
-        let high_risk_vulnerability_percent = high_risk_value;
+        let high_risk_vulnerability_value = high_risk_percent/100;
         let high_risk_pool = high_risk_vulnerability_percent*pool_prize;
-        let medium_risk_vulnerability_percent = medium_risk_value; 
+        let medium_risk_vulnerability_value = medium_risk_percent/100; 
         let medium_risk_pool = medium_risk_vulnerability_percent*pool_prize;
-        let gas_report_and_low_risk_cut = (85/100 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
+        let quality_assurance_value = quality_assurance_percent/100;
+        let quality_assurance_pool = quality_assurance_percent*pool_prize;
+        let gas_report = (70/100 - high_risk_vulnerability_percent -  medium_risk_vulnerability_percent)*pool_prize;
 
-        let data1 = pool_prize.as_bytes();
-        let data2 = title.as_bytes();
-        let data3 = start_time.as_bytes();
-        let data4 = end_time.as_bytes();
+        // let data1 = pool_prize.as_bytes();
+        // let data2 = title.as_bytes();
+        // let data3 = start_time.as_bytes();
+        // let data4 = end_time.as_bytes();
 
-        let combined_data = [data1, data2, data3, data4].concat();
-        let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
-        let encoded_hash = encode(&hash_output);
+        // let combined_data = [data1, data2, data3, data4].concat();
+        // let hash_output = hex_digest(Algorithm::SHA256, &combined_data);
+        // let encoded_hash = encode(&hash_output);
         //stake 25 % of the pool prize 
         // how to implement
         let stake_account = &mut ctx.accounts.stake_account;
@@ -68,12 +71,12 @@ mod hello_anchor {
         governance_token_account: ctx.accounts.governance_token_account.clone(),
         proposal_account: ctx.accounts.proposal_account.clone(),
         title,
-        start_date = start_time,
-        end_date = end_time,
+        start_date : start_time,
+        end_date : end_time,
         prize_pool,
-        proposal_id = encoded_hash,// created from contest info 
-        proposal_eligible=false,
-        success=true,
+        proposal_id : encoded_hash,// created from contest info 
+        proposal_eligible:false,
+        success:true,
         };
 
         Ok(());
@@ -119,6 +122,8 @@ mod hello_anchor {
                  vote_account.no += vote_weight;
             },
         
+        
+        };
         let end = false;
         if(current_time > voting_end_time){
             end = true;
@@ -127,13 +132,12 @@ mod hello_anchor {
         if(end == true){
             voting_verdict();
         }
-        };
         Ok(())
 
           
       }
 
-      pub fn voting_verdict(ctx: <Voting_Verdict>) -> Result<()>{
+      pub fn voting_verdict(ctx: Context<Voting_Verdict>) -> Result<()>{
         
         let vote_account = &mut ctx.accounts.vote_account;
         let yes_votes = vote_account.yes;
@@ -176,12 +180,12 @@ mod hello_anchor {
           let encoded_hash = encode(&hash_output);
           
           // add contestants using PDA , it can also act as a mapping
-          let candidate = new Candidate {
+          let candidate = Candidate {
              name,
              email,
              proposal_id,
-             votes=0;
-             candidate_id = encoded_hash, 
+             votes:0,
+             candidate_id : encoded_hash, 
           };
            
           Ok(())
@@ -224,9 +228,9 @@ mod hello_anchor {
           choice2.votes += 3*vote_weight;
           choice3.votes += 1*vote_weight;
           
-        Ok(())
+        Ok(());
        
-      }
+      
        
       // where to store the judges ??
       //need only till the contest ends
@@ -256,7 +260,7 @@ mod hello_anchor {
          #[access_control(SubmitReport::accounts(&ctx, &report_hash, &proposal_id))]
          pub fn submit_report(ctx: Context<Submit_Report>, report_hash: u8 ,proposal_id: String) -> Result<()>{
          
-           let contest_data= new ContestDataInner {
+           let contest_data =  ContestDataInner {
             hash,
             proposal_id,
            };
@@ -276,7 +280,7 @@ mod hello_anchor {
          report_rewardees: Vec<Vec<String>>  ,
         ) -> Result<()>{
 
-        let contestWinners = new WinnerDataInner {
+        let contestWinners =  WinnerDataInner {
          proposal_id,
          high_risk_rewardees,
          medium_risk_rewardees,
@@ -361,7 +365,7 @@ mod hello_anchor {
      }
     
 
-}
+
 
 #[account]
 pub struct Proposal {
@@ -482,14 +486,13 @@ pub struct Apply_For_Judge<'info> {
         seeds = [b"judge_4_good".as_ref(),authority.key().as_ref(),proposal_id.as_ref()], 
         bump
     )]
-    pub candidates_acc: <Account<'info, Candidate>>,
-    
+    pub candidates_acc: Account<'info, Candidate>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
 pub struct Vote_For_Judge<'info> {
     #[account(mut)]
-    pub candidates_acc: <Account<'info, Candidate>>,
+    pub candidates_acc: Account<'info, Candidate>,
 }
 pub struct Submit_Report<'info> {
     pub authority: Signer<'info>,
@@ -560,9 +563,9 @@ pub struct VoteBank {
 
 #[derive(Default)]
 pub struct StakeAccount {
-    pub staker = Pubkey, 
-    pub proposal_id = String,
-    pub bump: u8
+    pub staker : Pubkey, 
+    pub proposal_id : String,
+    pub bump: u8,
     #[account(mut)]
     pub stake : u64,
 }
